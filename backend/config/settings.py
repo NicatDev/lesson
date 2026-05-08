@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -109,6 +110,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -117,8 +120,14 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Shop API",
     "DESCRIPTION": (
-        "Autentifikasiya: JWT Bearer. Qeydiyyat və token endpointləri ictimaidır; "
-        "məhsul yaratmaq üçün əvvəl login edin və Swagger-də Authorize düyməsindən token əlavə edin."
+        "## Ümumi\n"
+        "- **İki Swagger UI:** `/api/docs/auth/` (yalnız qeydiyyat və token) və "
+        "`/api/docs/shop/` (kateqoriya və məhsullar).\n"
+        "- Shop sənədləşməsində əməliyyatları sınamaq üçün **Authorize** düyməsindən "
+        "`Bearer <access_token>` daxil edin.\n"
+        "- **Access token ömrü: 10 dəqiqə.** Bitəndə `POST /api/auth/token/refresh/` "
+        "ilə yeniləyin.\n"
+        "- Login/register/refresh **ictimai**dır; digər bütün API-lər JWT tələb edir.\n"
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -131,19 +140,42 @@ SPECTACULAR_SETTINGS = {
                 "type": "http",
                 "scheme": "bearer",
                 "bearerFormat": "JWT",
+                "description": "SimpleJWT access token (10 dəq). Məs: eyJhbGciOiJIUzI1NiIs...",
             }
         }
     },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
-        "displayOperationId": False,
+        "displayOperationId": True,
         "filter": True,
         "persistAuthorization": True,
+        "tryItOutEnabled": True,
+        "displayRequestDuration": True,
+        "docExpansion": "list",
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
+        "syntaxHighlight": {"theme": "agate"},
+        "showExtensions": True,
+        "showCommonExtensions": True,
     },
     "REDOC_UI_SETTINGS": {
         "hideDownloadButton": False,
         "expandResponses": "200,201",
+        "pathInMiddlePanel": True,
+        "nativeScrollbars": True,
     },
+    "TAGS": [
+        {"name": "Auth", "description": "İctimai: qeydiyyat, giriş, token yeniləmə."},
+        {"name": "Kateqoriyalar", "description": "Kateqoriya siyahısı (JWT tələb olunur)."},
+        {
+            "name": "Məhsullar (sadə)",
+            "description": "Yalnız kateqoriya filteri və created_at sıralaması (JWT).",
+        },
+        {
+            "name": "Məhsullar (geniş)",
+            "description": "Tam filter, sıralama, səhifələmə və məhsul yaratma (JWT).",
+        },
+    ],
 }
 
 CORS_ALLOWED_ORIGINS = [

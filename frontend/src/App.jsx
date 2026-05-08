@@ -20,8 +20,11 @@ function Layout({ children }) {
           <Link to="/categories">Kateqoriyalar</Link>
           <Link to="/products">Məhsullar</Link>
           <Link to="/products/new">Məhsul yarat</Link>
-          <a href="/api/docs/" target="_blank" rel="noreferrer">
-            Swagger
+          <a href="/api/docs/auth/" target="_blank" rel="noreferrer">
+            Swagger (Auth)
+          </a>
+          <a href="/api/docs/shop/" target="_blank" rel="noreferrer">
+            Swagger (Shop)
           </a>
           {!authed ? (
             <>
