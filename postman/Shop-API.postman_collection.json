@@ -1,0 +1,158 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-shop-api-lesson",
+    "name": "Shop API (lesson)",
+    "description": "Django REST + JWT.\n\n1. Collection dəyişənində `baseUrl` yoxlayın.\n2. **Login (token saxlayır)** göndərin — `accessToken` avtomatik yazılır.\n3. Digər qovluqlardakı sorğular Bearer istifadə edir.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://178.104.92.41:324/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth (ictimai)",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"demo_user\",\n  \"password\": \"demo12345\",\n  \"first_name\": \"Demo\",\n  \"last_name\": \"User\",\n  \"phone_number\": \"+994501112233\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register/"
+          },
+          "response": []
+        },
+        {
+          "name": "Login (token saxlayır)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var j = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', j.access);",
+                  "  pm.collectionVariables.set('refreshToken', j.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/token/"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var j = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', j.access);",
+                  "  if (j.refresh) pm.collectionVariables.set('refreshToken', j.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/auth/token/refresh/"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Kateqoriyalar",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Siyahı (default)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/categories/" },
+          "response": []
+        },
+        {
+          "name": "Axtarış və sıra",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories/?search=Tikinti&ordering=-created_at&page=1&page_size=10"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Məhsullar (sadə)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Siyahı",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/simple/?category=1&ordering=-created_at&page=1&page_size=10"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Məhsullar (geniş)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Siyahı",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?page=1&page_size=10&ordering=-created_at&is_active=true"
+          },
+          "response": []
+        },
+        {
+          "name": "Məhsul yarat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman test\",\n  \"description\": \"Test\",\n  \"price\": \"19.99\",\n  \"stock\": 5,\n  \"sku\": \"SKU-PM-001\",\n  \"is_active\": true,\n  \"category\": 1\n}"
+            },
+            "url": "{{baseUrl}}/products/"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
