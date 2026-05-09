@@ -22,8 +22,10 @@ class SwaggerSwitchView(SpectacularSwaggerView):
                 "swagger_ui_bundle": self._swagger_ui_resource("swagger-ui-bundle.js"),
                 "swagger_ui_standalone": self._swagger_ui_resource("swagger-ui-standalone-preset.js"),
                 "favicon_href": self._swagger_ui_favicon(),
-                "schema_url_shop": request.build_absolute_uri(reverse("schema-shop")),
-                "schema_url_auth": request.build_absolute_uri(reverse("schema-auth")),
+                # Nisbətən yol: brauzer həmişə cari origin (:324) ilə sorğu göndərir.
+                # $host (portsu olmadan) + build_absolute_uri bəzən :80 URL yaradır → CORS.
+                "schema_url_shop": reverse("schema-shop"),
+                "schema_url_auth": reverse("schema-auth"),
                 "settings": self._dump(spectacular_settings.SWAGGER_UI_SETTINGS),
                 "oauth2_config": self._dump(spectacular_settings.SWAGGER_UI_OAUTH2_CONFIG),
                 "csrf_header_name": self._get_csrf_header_name(),

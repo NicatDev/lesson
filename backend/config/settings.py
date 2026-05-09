@@ -7,6 +7,9 @@ SECRET_KEY = "django-insecure-demo-change-in-production-use-env"
 
 DEBUG = False
 
+# Nginx arxasında düzgün Host:port (məs. 178.104.92.41:324) üçün
+USE_X_FORWARDED_HOST = True
+
 ALLOWED_HOSTS = ["178.104.92.41", "localhost", "127.0.0.1", "0.0.0.0"]
 
 INSTALLED_APPS = [
