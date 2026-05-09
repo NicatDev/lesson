@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import generics, permissions
-from rest_framework.filters import OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 
 from config.schema_utils import RESP_400, RESP_401, RESP_403
 
@@ -21,12 +21,29 @@ from .serializers import (
 @extend_schema_view(
     get=extend_schema(
         operation_id="categories_list",
-        summary="Bütün kateqoriyalar",
+        summary="Kateqoriya siyahısı (axtarış və sıralama)",
         description=(
-            "Aktiv məhsul təsnifatları üçün kateqoriya siyahısı. **JWT Bearer tələb olunur.**\n\n"
-            "Səhifələmə yoxdur — bütün qeydlər bir cavabda qaytarılır (layihə miqyasında)."
+            "**search** — `name`, `description`, `slug` sahələrində **icontains** axtarışı.\n\n"
+            "**ordering** — `id`, `name`, `slug`, `created_at` (məs. `-created_at`). "
+            "Parametrsiz: `name` üzrə artan (model default)."
         ),
         tags=["Kateqoriyalar"],
+        parameters=[
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Mətn filteri (ad, təsvir, slug daxilində axtarır).",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="ordering",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Sıralama: `name`, `-created_at`, `id`, …",
+                required=False,
+            ),
+        ],
         responses={
             200: OpenApiResponse(
                 response=CategorySerializer(many=True),
@@ -57,6 +74,10 @@ class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = None
+    filter_backends = (SearchFilter, OrderingFilter)
+    search_fields = ("name", "description", "slug")
+    ordering_fields = ("id", "name", "slug", "created_at")
+    ordering = ("name",)
 
 
 @extend_schema_view(
