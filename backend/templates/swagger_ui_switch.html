@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title|default:"Swagger" }}</title>
+  {% if favicon_href %}<link rel="icon" href="{{ favicon_href }}">{% endif %}
+  <link rel="stylesheet" href="{{ swagger_ui_css }}">
+  <style>
+    html { box-sizing: border-box; overflow-y: scroll; }
+    *, *:after, *:before { box-sizing: inherit; }
+    body { background: #fafafa; margin: 0; font-family: system-ui, sans-serif; }
+    #swagger-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #1a1a2e;
+      color: #eee;
+      border-bottom: 1px solid #333;
+    }
+    #swagger-toolbar label { font-size: 14px; }
+    #spec-select {
+      min-width: 280px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #16213e;
+      color: #fff;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-toolbar">
+    <label for="spec-select">API sənədi</label>
+    <select id="spec-select" aria-label="OpenAPI sxemi seçin">
+      <option value="{{ schema_url_shop }}">Shop — kateqoriya və məhsullar</option>
+      <option value="{{ schema_url_auth }}">Auth — qeydiyyat və token</option>
+    </select>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="{{ swagger_ui_bundle }}"></script>
+  <script src="{{ swagger_ui_standalone }}"></script>
+  <script>
+  (function () {
+    const swaggerSettings = {{ settings|safe }};
+    const schemaAuthNames = {{ schema_auth_names|safe }};
+    let schemaAuthFailed = false;
+    const plugins = [];
+
+    const reloadSchemaOnAuthChange = () => ({
+      statePlugins: {
+        auth: {
+          wrapActions: {
+            authorizeOauth2: (ori) => (...args) => {
+              schemaAuthFailed = false;
+              setTimeout(() => window.ui.specActions.download());
+              return ori(...args);
+            },
+            authorize: (ori) => (...args) => {
+              schemaAuthFailed = false;
+              setTimeout(() => window.ui.specActions.download());
+              return ori(...args);
+            },
+            logout: (ori) => (...args) => {
+              schemaAuthFailed = false;
+              setTimeout(() => window.ui.specActions.download());
+              return ori(...args);
+            },
+          },
+        },
+      },
+    });
+
+    if (schemaAuthNames.length > 0) {
+      plugins.push(reloadSchemaOnAuthChange);
+    }
+
+    const uiInitialized = () => {
+      try { return !!window.ui; } catch (e) { return false; }
+    };
+
+    const isSchemaUrl = (url) => {
+      if (!uiInitialized()) return false;
+      return url === new URL(window.ui.getConfigs().url, document.baseURI).href;
+    };
+
+    const responseInterceptor = (response, ...args) => {
+      if (!response.ok && isSchemaUrl(response.url)) {
+        console.warn("schema request received '" + response.status + "'");
+        if (!schemaAuthFailed) {
+          schemaAuthFailed = true;
+          setTimeout(() => window.ui.specActions.download());
+        }
+      }
+      return response;
+    };
+
+    const injectAuthCredentials = (request) => {
+      let authorized;
+      if (uiInitialized()) {
+        const state = window.ui.getState().get("auth").get("authorized");
+        if (state !== undefined && Object.keys(state.toJS()).length > 0) {
+          authorized = state.toJS();
+        }
+      } else if (![undefined, "{}"].includes(localStorage.authorized)) {
+        authorized = JSON.parse(localStorage.authorized);
+      }
+      if (authorized === undefined) return;
+      for (const authName of schemaAuthNames) {
+        const authDef = authorized[authName];
+        if (authDef === undefined || authDef.schema === undefined) continue;
+        if (authDef.schema.type === "http" && authDef.schema.scheme === "bearer") {
+          request.headers["Authorization"] = "Bearer " + authDef.value;
+          return;
+        }
+        if (authDef.schema.type === "http" && authDef.schema.scheme === "basic") {
+          request.headers["Authorization"] = "Basic " + btoa(authDef.value.username + ":" + authDef.value.password);
+          return;
+        }
+        if (authDef.schema.type === "apiKey" && authDef.schema.in === "header") {
+          request.headers[authDef.schema.name] = authDef.value;
+          return;
+        }
+        if (authDef.schema.type === "oauth2" && authDef.token && authDef.token.token_type === "Bearer") {
+          request.headers["Authorization"] = "Bearer " + authDef.token.access_token;
+          return;
+        }
+      }
+    };
+
+    const requestInterceptor = (request, ...args) => {
+      if (request.loadSpec && schemaAuthNames.length > 0 && !schemaAuthFailed) {
+        try { injectAuthCredentials(request); } catch (e) {
+          console.error("schema auth injection failed", e);
+        }
+      }
+      if (!["GET", undefined].includes(request.method) && request.credentials === "same-origin") {
+        request.headers["{{ csrf_header_name }}"] = "{{ csrf_token }}";
+      }
+      return request;
+    };
+
+    const shopUrl = "{{ schema_url_shop|escapejs }}";
+    const authUrl = "{{ schema_url_auth|escapejs }}";
+
+    function pickInitialUrl() {
+      const q = new URLSearchParams(window.location.search).get("spec");
+      if (q === "auth") return authUrl;
+      return shopUrl;
+    }
+
+    function mountSwagger(url) {
+      document.getElementById("swagger-ui").innerHTML = "";
+      schemaAuthFailed = false;
+      window.ui = SwaggerUIBundle({
+        url: url,
+        dom_id: "#swagger-ui",
+        presets: [SwaggerUIBundle.presets.apis],
+        plugins,
+        layout: "BaseLayout",
+        requestInterceptor,
+        responseInterceptor,
+        ...swaggerSettings,
+      });
+      {% if oauth2_config %}
+      window.ui.initOAuth({{ oauth2_config|safe }});
+      {% endif %}
+    }
+
+    const select = document.getElementById("spec-select");
+    const initial = pickInitialUrl();
+    select.value = initial === authUrl ? authUrl : shopUrl;
+    mountSwagger(select.value);
+
+    select.addEventListener("change", function () {
+      const u = this.value;
+      const spec = u === authUrl ? "auth" : "shop";
+      const path = window.location.pathname + "?spec=" + spec;
+      window.history.replaceState({}, "", path);
+      mountSwagger(u);
+    });
+  })();
+  </script>
+</body>
+</html>

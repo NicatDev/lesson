@@ -1,18 +1,13 @@
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
+
+from .views import SwaggerSwitchView
 
 _AUTH_SCHEMA = {
     "TITLE": "Shop API — Autentifikasiya",
-    "DESCRIPTION": (
-        "### İctimai endpointlər\n"
-        "Bu sənəddə yalnız **qeydiyyat**, **giriş** və **token yeniləmə** var. "
-        "**Authorize tələb olunmur.**\n\n"
-        "- `POST /api/auth/register/` — yeni istifadəçi.\n"
-        "- `POST /api/auth/token/` — `access` + `refresh` (access **10 dəq** etibarlıdır).\n"
-        "- `POST /api/auth/token/refresh/` — yeni access (refresh göndərin).\n"
-    ),
+    "DESCRIPTION": "İctimai: qeydiyyat, giriş, token yeniləmə. Access token ömrü: 10 dəq.",
     "VERSION": "1.0.0",
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/",
@@ -22,29 +17,10 @@ _AUTH_SCHEMA = {
 
 _SHOP_SCHEMA = {
     "TITLE": "Shop API — Kateqoriya və məhsullar",
-    "DESCRIPTION": (
-        "### Qorunan API\n"
-        "Bütün əməliyyatlar üçün **JWT Bearer** tələb olunur.\n\n"
-        "1. Əvvəl **Auth** Swagger-da və ya `POST /api/auth/token/` ilə token alın.\n"
-        "2. Bu səhifədə yuxarıdan **Authorize** → `Bearer <access_token>` daxil edin.\n"
-        "3. Access **10 dəqiqə** sonra bitə bilər — `refresh` ilə yeniləyin.\n\n"
-        "**Sadə məhsul siyahısı** yalnız `category` + `ordering` (`created_at` / `-created_at`). "
-        "**Geniş** endpoint bütün filter/sıralama/səhifələməni dəstəkləyir.\n"
-    ),
+    "DESCRIPTION": "",
     "VERSION": "1.0.0",
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/",
-    "SECURITY": [{"bearerAuth": []}],
-    "APPEND_COMPONENTS": {
-        "securitySchemes": {
-            "bearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": "Access token (10 dəq).",
-            }
-        }
-    },
     "PREPROCESSING_HOOKS": ["config.schema_hooks.preprocess_shop_only"],
 }
 
@@ -57,7 +33,7 @@ urlpatterns = [
     ),
     path(
         "api/docs/auth/",
-        SpectacularSwaggerView.as_view(url_name="schema-auth"),
+        RedirectView.as_view(url="/api/docs/?spec=auth", permanent=False),
         name="swagger-auth",
     ),
     path(
@@ -72,7 +48,7 @@ urlpatterns = [
     ),
     path(
         "api/docs/shop/",
-        SpectacularSwaggerView.as_view(url_name="schema-shop"),
+        RedirectView.as_view(url="/api/docs/?spec=shop", permanent=False),
         name="swagger-shop",
     ),
     path(
@@ -85,11 +61,7 @@ urlpatterns = [
         SpectacularAPIView.as_view(custom_settings=_SHOP_SCHEMA),
         name="schema",
     ),
-    path(
-        "api/docs/",
-        RedirectView.as_view(url="/api/docs/shop/", permanent=False),
-        name="swagger-ui-redirect",
-    ),
+    path("api/docs/", SwaggerSwitchView.as_view(), name="swagger-ui"),
     path(
         "api/redoc/",
         RedirectView.as_view(url="/api/redoc/shop/", permanent=False),

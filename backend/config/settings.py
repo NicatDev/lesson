@@ -42,7 +42,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -120,30 +120,14 @@ SIMPLE_JWT = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Shop API",
     "DESCRIPTION": (
-        "## Ümumi\n"
-        "- **İki Swagger UI:** `/api/docs/auth/` (yalnız qeydiyyat və token) və "
-        "`/api/docs/shop/` (kateqoriya və məhsullar).\n"
-        "- Shop sənədləşməsində əməliyyatları sınamaq üçün **Authorize** düyməsindən "
-        "`Bearer <access_token>` daxil edin.\n"
-        "- **Access token ömrü: 10 dəqiqə.** Bitəndə `POST /api/auth/token/refresh/` "
-        "ilə yeniləyin.\n"
-        "- Login/register/refresh **ictimai**dır; digər bütün API-lər JWT tələb edir.\n"
+        "Swagger-də yuxarıdan **API sənədi** seçin (Auth / Shop). "
+        "Shop əməliyyatları üçün **Authorize** ilə JWT daxil edin. "
+        "Access token ömrü: **10 dəqiqə**."
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/",
-    "SECURITY": [{"bearerAuth": []}],
-    "APPEND_COMPONENTS": {
-        "securitySchemes": {
-            "bearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": "SimpleJWT access token (10 dəq). Məs: eyJhbGciOiJIUzI1NiIs...",
-            }
-        }
-    },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "displayOperationId": True,

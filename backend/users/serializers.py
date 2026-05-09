@@ -5,6 +5,14 @@ User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        min_length=1,
+        help_text=(
+            "Ən çox 150 simvol (minimum 1). İcazəli: hərflər, rəqəmlər və @ . + - _ "
+            "(Django UsernameValidator qaydaları)."
+        ),
+    )
     password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
