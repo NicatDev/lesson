@@ -8,6 +8,13 @@ from shop.models import Category
 User = get_user_model()
 
 
+def _rows(response_data):
+    """Səhifələnmiş və ya düz siyahı."""
+    if isinstance(response_data, dict) and "results" in response_data:
+        return response_data["results"]
+    return response_data
+
+
 class CategoryListFilterTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -33,28 +40,45 @@ class CategoryListFilterTests(TestCase):
     def test_search_tikinti_returns_only_matches(self):
         response = self.client.get("/api/categories/", {"search": "Tikinti"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.json()
+        data = _rows(response.json())
         self.assertEqual(len(data), 1, data)
         self.assertIn("Tikinti", data[0]["name"])
 
     def test_search_slug_partial(self):
         response = self.client.get("/api/categories/", {"search": "elek"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        names = {row["name"] for row in response.json()}
+        names = {row["name"] for row in _rows(response.json())}
         self.assertEqual(names, {"Elektronika"})
 
-    def test_without_search_returns_all(self):
+    def test_filter_name_param(self):
+        response = self.client.get("/api/categories/", {"name": "Elek"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = _rows(response.json())
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["name"], "Elektronika")
+
+    def test_without_search_returns_all_in_results(self):
         response = self.client.get("/api/categories/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()), 3)
+        body = response.json()
+        self.assertIn("count", body)
+        self.assertIn("results", body)
+        self.assertEqual(body["count"], 3)
+        self.assertEqual(len(body["results"]), 3)
 
     def test_ordering_by_created_at_desc(self):
-        # setUp-da son yaradılan (Kosmetika) ən yeni created_at olmalıdır
         response = self.client.get("/api/categories/", {"ordering": "-created_at"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.json()
+        data = _rows(response.json())
         self.assertEqual(len(data), 3)
         self.assertEqual(data[0]["slug"], "cat-kosm-test")
+
+    def test_pagination_page_size(self):
+        response = self.client.get("/api/categories/", {"page_size": "2", "page": "1"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["count"], 3)
 
     def test_requires_auth(self):
         self.client.force_authenticate(user=None)

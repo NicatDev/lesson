@@ -7,9 +7,9 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 
 from config.schema_utils import RESP_400, RESP_401, RESP_403
 
-from .filters import ProductAdvancedFilter
+from .filters import CategoryFilter, ProductAdvancedFilter
 from .models import Category, Product
-from .pagination import AdvancedProductPagination, SimpleProductPagination
+from .pagination import AdvancedProductPagination, CategoryPagination, SimpleProductPagination
 from .serializers import (
     CategorySerializer,
     ProductCreateSerializer,
@@ -18,36 +18,89 @@ from .serializers import (
 )
 
 
+_CATEGORY_LIST_PARAMS = [
+    OpenApiParameter(
+        name="id",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Kateqoriya ID (dəqiq).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="name",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Ad üzrə **icontains** (django-filter).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="slug",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Slug üzrə **icontains**.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="created_after",
+        type=OpenApiTypes.DATETIME,
+        location=OpenApiParameter.QUERY,
+        description="`created_at >=` (ISO 8601).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="created_before",
+        type=OpenApiTypes.DATETIME,
+        location=OpenApiParameter.QUERY,
+        description="`created_at <=` (ISO 8601).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="search",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Ümumi axtarış: `name`, `description`, `slug` (SearchFilter, `search=`).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="ordering",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Sıralama: `id`, `name`, `slug`, `created_at`, `-created_at`, …",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="page",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Səhifə (1-dən).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="page_size",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Səhifə ölçüsü (maks. 100, default 30).",
+        required=False,
+    ),
+]
+
+
 @extend_schema_view(
     get=extend_schema(
         operation_id="categories_list",
-        summary="Kateqoriya siyahısı (axtarış və sıralama)",
+        summary="Kateqoriya siyahısı — filter, axtarış, sıra, səhifə",
         description=(
-            "**search** — `name`, `description`, `slug` sahələrində **icontains** axtarışı.\n\n"
-            "**ordering** — `id`, `name`, `slug`, `created_at` (məs. `-created_at`). "
-            "Parametrsiz: `name` üzrə artan (model default)."
+            "**Filter:** `id`, `name`, `slug`, tarix aralığı (`created_after` / `created_before`).\n\n"
+            "**search** — bir sətirdə ad + təsvir + slug üzrə axtarış.\n\n"
+            "**ordering** — `id`, `name`, `slug`, `created_at`.\n\n"
+            "**Səhifələmə:** `page`, `page_size`."
         ),
         tags=["Kateqoriyalar"],
-        parameters=[
-            OpenApiParameter(
-                name="search",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Mətn filteri (ad, təsvir, slug daxilində axtarır).",
-                required=False,
-            ),
-            OpenApiParameter(
-                name="ordering",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Sıralama: `name`, `-created_at`, `id`, …",
-                required=False,
-            ),
-        ],
+        parameters=_CATEGORY_LIST_PARAMS,
         responses={
             200: OpenApiResponse(
                 response=CategorySerializer(many=True),
-                description="Kateqoriya massivi.",
+                description="Səhifələnmiş cavab: `count`, `next`, `previous`, `results`.",
             ),
             401: RESP_401,
             403: RESP_403,
@@ -73,8 +126,9 @@ class CategoryListView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (permissions.IsAuthenticated,)
-    pagination_class = None
-    filter_backends = (SearchFilter, OrderingFilter)
+    pagination_class = CategoryPagination
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_class = CategoryFilter
     search_fields = ("name", "description", "slug")
     ordering_fields = ("id", "name", "slug", "created_at")
     ordering = ("name",)
@@ -85,9 +139,9 @@ class CategoryListView(generics.ListAPIView):
         operation_id="products_list_simple",
         summary="Məhsullar — sadə API",
         description=(
-            "**Məhdud filter:** yalnız `category` (ID). **Sıralama:** yalnız `created_at` və ya `-created_at`.\n\n"
-            "Aktiv (`is_active=true`) məhsullar göstərilir. **JWT Bearer** mütləqdir.\n\n"
-            "Səhifələmə: `page`, `page_size` (maks. 50)."
+            "**Filter:** `category` (ID), **search** (ad, təsvir, SKU üzrə icontains).\n\n"
+            "**Sıralama:** yalnız `created_at` / `-created_at`.\n\n"
+            "Yalnız **aktiv** məhsullar. **Səhifələmə:** `page`, `page_size` (maks. 50)."
         ),
         tags=["Məhsullar (sadə)"],
         parameters=[
@@ -96,6 +150,13 @@ class CategoryListView(generics.ListAPIView):
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description="Kateqoriya **primary key** (məhdud filter).",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Ümumi mətn: `name`, `description`, `sku` (icontains).",
                 required=False,
             ),
             OpenApiParameter(
@@ -135,6 +196,8 @@ class SimpleProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = SimpleProductPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ("name", "description", "sku")
 
     def get_queryset(self) -> QuerySet[Product]:
         qs = Product.objects.select_related("category").filter(is_active=True)
@@ -148,6 +211,13 @@ class SimpleProductListView(generics.ListAPIView):
 
 
 _ADVANCED_FILTER_PARAMS = [
+    OpenApiParameter(
+        name="search",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Ümumi mətn: **ad**, **təsvir**, **SKU** üzrə icontains (SearchFilter).",
+        required=False,
+    ),
     OpenApiParameter(
         name="name",
         type=OpenApiTypes.STR,
@@ -337,7 +407,8 @@ _ADVANCED_FILTER_PARAMS = [
 class ProductAdvancedListCreateView(generics.ListCreateAPIView):
     queryset = Product.objects.select_related("category").all()
     filterset_class = ProductAdvancedFilter
-    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filter_backends = (DjangoFilterBackend, OrderingFilter, SearchFilter)
+    search_fields = ("name", "description", "sku")
     ordering_fields = (
         "id",
         "name",
