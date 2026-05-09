@@ -3,7 +3,7 @@ import { api } from "../api.js";
 
 const defaultFilters = {
   page: "1",
-  page_size: "20",
+  page_size: "10",
   ordering: "-created_at",
   category: "",
   name: "",

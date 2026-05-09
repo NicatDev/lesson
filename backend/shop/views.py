@@ -79,7 +79,7 @@ _CATEGORY_LIST_PARAMS = [
         name="page_size",
         type=OpenApiTypes.INT,
         location=OpenApiParameter.QUERY,
-        description="Səhifə ölçüsü (maks. 100, default 30).",
+        description="Səhifə ölçüsü (default 10, maks. 100).",
         required=False,
     ),
 ]
@@ -141,7 +141,7 @@ class CategoryListView(generics.ListAPIView):
         description=(
             "**Filter:** `category` (ID), **search** (ad, təsvir, SKU üzrə icontains).\n\n"
             "**Sıralama:** yalnız `created_at` / `-created_at`.\n\n"
-            "Yalnız **aktiv** məhsullar. **Səhifələmə:** `page`, `page_size` (maks. 50)."
+            "Yalnız **aktiv** məhsullar. **Səhifələmə:** `page`, `page_size` (default 10, maks. 50)."
         ),
         tags=["Məhsullar (sadə)"],
         parameters=[
@@ -178,7 +178,7 @@ class CategoryListView(generics.ListAPIView):
                 name="page_size",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description="Səhifə ölçüsü (maks. 50).",
+                description="Səhifə ölçüsü (default 10, maks. 50).",
                 required=False,
             ),
         ],
@@ -344,7 +344,7 @@ _ADVANCED_FILTER_PARAMS = [
         name="page_size",
         type=OpenApiTypes.INT,
         location=OpenApiParameter.QUERY,
-        description="Səhifə ölçüsü (maks. 200).",
+        description="Səhifə ölçüsü (default 10, maks. 200).",
         required=False,
     ),
 ]
@@ -356,7 +356,7 @@ _ADVANCED_FILTER_PARAMS = [
         summary="Məhsullar — geniş filter və sıralama",
         description=(
             "Bütün əsas **filter** parametrləri (ad, qiymət aralığı, tarix, kateqoriya, …) və "
-            "**ordering** (istənilən icazəli sahə, asc/desc). **Səhifələmə:** `page`, `page_size` (maks. 200).\n\n"
+            "**ordering** (istənilən icazəli sahə, asc/desc). **Səhifələmə:** `page`, `page_size` (default 10, maks. 200).\n\n"
             "**JWT Bearer** mütləqdir."
         ),
         tags=["Məhsullar (geniş)"],
