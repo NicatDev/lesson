@@ -7,7 +7,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 
 from config.schema_utils import RESP_400, RESP_401, RESP_403
 
-from .filters import CategoryFilter, ProductAdvancedFilter
+from .filters import CategoryFilter, ProductAdvancedFilter, parse_category_ids
 from .models import Category, Product
 from .pagination import AdvancedProductPagination, CategoryPagination, SimpleProductPagination
 from .serializers import (
@@ -310,6 +310,36 @@ _ADVANCED_FILTER_PARAMS = [
         required=False,
     ),
     OpenApiParameter(
+        name="categoryId",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Təkrarlanan kateqoriya ID filteri: `categoryId=1&categoryId=2&categoryId=3`.",
+        required=False,
+        many=True,
+    ),
+    OpenApiParameter(
+        name="categoryIds",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Vergüllə ayrılmış və ya JSON massiv formatı: `1,2,3` və ya `[1,2,3]`.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="categoryIds[]",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Array query formatı: `categoryIds[]=1&categoryIds[]=2&categoryIds[]=3`.",
+        required=False,
+        many=True,
+    ),
+    OpenApiParameter(
+        name="categoryIds[0]",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Indexed array query formatı: `categoryIds[0]=1&categoryIds[1]=2&categoryIds[2]=3`.",
+        required=False,
+    ),
+    OpenApiParameter(
         name="is_active",
         type=OpenApiTypes.BOOL,
         location=OpenApiParameter.QUERY,
@@ -425,6 +455,13 @@ class ProductAdvancedListCreateView(generics.ListCreateAPIView):
     ordering = ["-created_at"]
     pagination_class = AdvancedProductPagination
     permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self) -> QuerySet[Product]:
+        qs = Product.objects.select_related("category").all()
+        category_ids = parse_category_ids(self.request.query_params)
+        if category_ids:
+            qs = qs.filter(category_id__in=category_ids)
+        return qs
 
     def get_serializer_class(self):
         if self.request.method == "POST":

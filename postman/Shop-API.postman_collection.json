@@ -140,6 +140,46 @@
           "response": []
         },
         {
+          "name": "Filter: categoryId təkrarlı",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?categoryId=1&categoryId=2&categoryId=3&page=1&page_size=10"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter: categoryIds vergüllə",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?categoryIds=1,2,3&page=1&page_size=10"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter: categoryIds[]",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?categoryIds[]=1&categoryIds[]=2&categoryIds[]=3&page=1&page_size=10"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter: categoryIds indeksli",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?categoryIds[0]=1&categoryIds[1]=2&categoryIds[2]=3&page=1&page_size=10"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter: categoryIds JSON massiv",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/?categoryIds=[1,2,3]&page=1&page_size=10"
+          },
+          "response": []
+        },
+        {
           "name": "Məhsul yarat",
           "request": {
             "method": "POST",
